@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ishanth AI – Sign up</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22lg%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23ff9a00%22/%3E%3Cstop%20offset%3D%22.55%22%20stop-color%3D%22%23f43f5e%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23a855f7%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2220%22%20fill%3D%22url%28%23lg%29%22/%3E%3Crect%20x%3D%2226%22%20y%3D%2229%22%20width%3D%2212%22%20height%3D%2225%22%20rx%3D%226%22%20fill%3D%22%23fff%22/%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2217%22%20r%3D%228%22%20fill%3D%22%23fff%22/%3E%3Cpath%20fill%3D%22%23fff%22%20d%3D%22M38%2021L46%2027L36%2025Z%22/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#ffffff;--card:#f0f4f9;--field:#ffffff;--ink:#1f1f1f;--muted:#5f6368;--line:#dfe3e8;
+  --hover:#e2e8f0;--accent:#0b57d0;--err:#b3261e;--errbg:#fce8e6;--ok:#146c2e;--okbg:#e6f4ea;color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#131314;--card:#1e1f20;--field:#131314;--ink:#e3e3e3;--muted:#9aa0a6;--line:#3c4043;
+    --hover:#333537;--accent:#a8c7fa;--err:#f2b8b5;--errbg:#3b1f1d;--ok:#9fd8ac;--okbg:#17301d;color-scheme:dark;
+  }
+}
+*{box-sizing:border-box;margin:0}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{font-family:"Google Sans","Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);
+  display:grid;place-items:center;padding:20px;padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(safe-area-inset-bottom));min-height:100dvh}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.card{width:min(100%,420px);background:var(--card);border-radius:28px;padding:30px 26px 26px}
+.logo{width:52px;height:52px;display:block;margin-bottom:18px}
+h1{font-size:1.7rem;font-weight:500;letter-spacing:-.02em;line-height:1.2;
+  background:linear-gradient(90deg,#ff9a00,#f43f5e 50%,#a855f7);-webkit-background-clip:text;background-clip:text;color:transparent;width:fit-content}
+.sub{color:var(--muted);font-size:.92rem;line-height:1.5;margin:6px 0 20px}
+
+.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--hover);border-radius:20px;padding:4px;margin-bottom:18px}
+.tabs button{padding:9px;border-radius:16px;font-size:.92rem;color:var(--muted)}
+.tabs button.on{background:var(--bg);color:var(--ink);font-weight:500}
+
+label{display:block;font-size:.82rem;color:var(--muted);margin-bottom:14px}
+.field{display:block;width:100%;margin-top:6px;background:var(--field);border:1px solid var(--line);border-radius:14px;padding:13px 15px;font-size:1rem;color:var(--ink);outline:none}
+.field:focus{border-color:var(--accent)}
+.field:disabled{opacity:.6}
+.pw{position:relative}
+.pw .field{padding-right:68px}
+.eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);margin-top:3px;padding:6px 10px;border-radius:10px;font-size:.8rem;color:var(--accent)}
+.eye:hover{background:var(--hover)}
+
+.link{color:var(--accent);font-size:.88rem;padding:2px 0}
+.link:hover{text-decoration:underline}
+.row{display:flex;justify-content:space-between;align-items:center;gap:6px 14px;flex-wrap:wrap;margin:-4px 0 14px}
+.switch{font-size:.88rem;color:var(--muted)}
+
+#msg{font-size:.88rem;line-height:1.5;border-radius:14px;padding:11px 14px;margin-bottom:14px}
+#msg:empty{display:none}
+#msg.err{background:var(--errbg);color:var(--err)}
+#msg.ok{background:var(--okbg);color:var(--ok)}
+#msg button{display:block;margin-top:6px;font-weight:500;color:inherit;text-decoration:underline;padding:0}
+
+.primary{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:var(--accent);color:var(--bg);
+  border-radius:24px;padding:13px;font-size:1rem;font-weight:500}
+.primary:disabled{opacity:.7;cursor:not-allowed}
+.spin{width:18px;height:18px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:r .7s linear infinite;display:none}
+.primary.busy .spin{display:block}
+@keyframes r{to{transform:rotate(360deg)}}
+.back{display:block;margin:16px auto 0}
+
+#overlay{position:fixed;inset:0;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(6px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:10}
+#overlay .spin{display:block;width:46px;height:46px;border-width:4px;color:var(--accent)}
+#overlay p{font-size:1rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<main class="card">
+  <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9a00"/><stop offset=".55" stop-color="#f43f5e"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs><rect width="64" height="64" rx="20" fill="url(#g)"/><rect x="26" y="29" width="12" height="25" rx="6" fill="#fff"/><circle cx="32" cy="17" r="8" fill="#fff"/><path fill="#fff" d="M38 21L46 27L36 25Z"/></svg>
+  <h1 id="title">Create your account</h1>
+  <p class="sub" id="sub">Sign up with your email to start using Ishanth AI</p>
+
+  <div class="tabs" id="tabs">
+    <button type="button" id="tabLogin">Log in</button>
+    <button type="button" id="tabSignup" class="on">Sign up</button>
+  </div>
+
+  <form id="form" novalidate>
+    <label>Email
+      <input class="field" id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@gmail.com" required>
+    </label>
+    <label id="pwWrap">Password
+      <div class="pw">
+        <input class="field" id="pw" type="password" autocomplete="new-password" placeholder="At least 6 characters">
+        <button type="button" class="eye" id="eye" aria-label="Show password">Show</button>
+      </div>
+    </label>
+    <label id="cfWrap">Confirm password
+      <input class="field" id="pw2" type="password" autocomplete="new-password" placeholder="Type the password again">
+    </label>
+    <div class="row" id="forgotRow">
+      <span class="switch"><span id="switchQ">Already have an account?</span> <button type="button" class="link" id="switchBtn">Log in</button></span>
+      <button type="button" class="link" id="forgot">Forgot password?</button>
+    </div>
+    <div id="msg" role="alert" aria-live="polite"></div>
+    <button class="primary" id="go" type="submit"><i class="spin" aria-hidden="true"></i><span id="goText">Sign up</span></button>
+  </form>
+  <button type="button" class="link back" id="back" hidden>← Back to log in</button>
+</main>
+
+<div id="overlay" hidden role="status" aria-live="polite"><i class="spin"></i><p id="ovText">Please wait…</p></div>
+
+<script type="module">
+import { auth } from "./firebase-config.js";
+import {
+  createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  sendPasswordResetEmail, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const $ = id => document.getElementById(id);
+const APP_PAGE = "ai.html";
+let mode = "signup", working = false;
+
+const TEXT = {
+  login:  { title: "Welcome back",        sub: "Log in to continue to Ishanth AI",              btn: "Log in" },
+  signup: { title: "Create your account", sub: "Sign up with your email to start using Ishanth AI", btn: "Sign up" },
+  forgot: { title: "Reset your password", sub: "Enter your email and we'll send you a reset link", btn: "Send reset link" }
+};
+
+/* ---------- helpers ---------- */
+function showMsg(text, kind, action){
+  const m = $("msg"); m.className = kind; m.textContent = text;
+  if (action) { const b = document.createElement("button"); b.type = "button"; b.textContent = action.label; b.onclick = action.fn; m.appendChild(b); }
+}
+const clearMsg = () => { $("msg").className = ""; $("msg").textContent = ""; };
+
+function setBusy(v){
+  working = v;
+  $("go").classList.toggle("busy", v); $("go").disabled = v;
+  ["email", "pw", "pw2", "forgot", "switchBtn", "tabLogin", "tabSignup", "back"].forEach(id => $(id).disabled = v);
+}
+function setMode(m){
+  mode = m; const t = TEXT[m];
+  $("title").textContent = t.title; $("sub").textContent = t.sub; $("goText").textContent = t.btn;
+  $("pwWrap").hidden = m === "forgot";
+  $("cfWrap").hidden = m !== "signup";
+  $("forgotRow").hidden = m === "forgot";
+  $("switchQ").textContent = m === "signup" ? "Already have an account?" : "New here?";
+  $("switchBtn").textContent = m === "signup" ? "Log in" : "Sign up";
+  $("tabs").hidden = m === "forgot";
+  $("back").hidden = m !== "forgot";
+  $("tabLogin").classList.toggle("on", m === "login");
+  $("tabSignup").classList.toggle("on", m === "signup");
+  $("pw").autocomplete = m === "signup" ? "new-password" : "current-password";
+  document.title = "Ishanth AI – " + (m === "signup" ? "Sign up" : m === "forgot" ? "Reset password" : "Log in");
+  clearMsg();
+}
+function goToApp(text){
+  $("ovText").textContent = text; $("overlay").hidden = false;
+  setTimeout(() => location.replace(APP_PAGE), 1200);
+}
+function friendly(err){
+  switch (err.code) {
+    case "auth/email-already-in-use": return "This email is already registered. Please log in instead.";
+    case "auth/invalid-email":        return "That email address doesn't look right.";
+    case "auth/weak-password":        return "Password is too weak. Use at least 6 characters.";
+    case "auth/invalid-credential":
+    case "auth/wrong-password":
+    case "auth/user-not-found":       return "Incorrect email or password.";
+    case "auth/user-disabled":        return "This account has been disabled.";
+    case "auth/too-many-requests":    return "Too many attempts. Please wait a few minutes and try again.";
+    case "auth/network-request-failed": return "Network error. Check your internet connection and try again.";
+    case "auth/operation-not-allowed":  return "Email/password sign-in isn't enabled in your Firebase project yet.";
+    case "auth/unauthorized-domain":    return "This website's domain isn't authorized in Firebase (Authentication > Settings > Authorized domains).";
+    case "auth/invalid-api-key":
+    case "auth/api-key-not-valid.-please-pass-a-valid-api-key.": return "Firebase config is missing or wrong. Check firebase-config.js.";
+    default: return "Something went wrong: " + (err.message || err.code || "unknown error");
+  }
+}
+
+/* ---------- tabs and links ---------- */
+$("tabLogin").onclick = () => setMode("login");
+$("tabSignup").onclick = () => setMode("signup");
+$("forgot").onclick = () => setMode("forgot");
+$("switchBtn").onclick = () => setMode(mode === "signup" ? "login" : "signup");
+$("back").onclick = () => setMode("login");
+$("eye").onclick = () => {
+  const show = $("pw").type === "password";
+  $("pw").type = show ? "text" : "password"; $("pw2").type = $("pw").type;
+  $("eye").textContent = show ? "Hide" : "Show"; $("eye").setAttribute("aria-label", show ? "Hide password" : "Show password");
+};
+
+/* ---------- submit ---------- */
+$("form").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (working) return;
+  clearMsg();
+  const email = $("email").value.trim(), pw = $("pw").value;
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showMsg("Enter a valid email address.", "err");
+  if (mode === "login" && !pw) return showMsg("Enter your password.", "err");
+  if (mode === "signup") {
+    if (pw.length < 6) return showMsg("Password must be at least 6 characters.", "err");
+    if (pw !== $("pw2").value) return showMsg("Passwords do not match.", "err");
+  }
+
+  setBusy(true);
+  try {
+    if (mode === "forgot") {
+      await sendPasswordResetEmail(auth, email);
+      showMsg("A password reset link has been sent to " + email + ". Check your inbox (and spam folder).", "ok");
+      setBusy(false);
+    } else {
+      if (mode === "signup") await createUserWithEmailAndPassword(auth, email, pw);
+      else await signInWithEmailAndPassword(auth, email, pw);
+      goToApp(mode === "signup" ? "Account created! Opening Ishanth AI…" : "Logging you in…");
+    }
+  } catch (err) {
+    setBusy(false);
+    if (mode === "forgot" && err.code === "auth/user-not-found") {
+      showMsg("This email does not exist. Please sign up and come back here.", "err",
+        { label: "Go to Sign up", fn: () => setMode("signup") });
+    } else showMsg(friendly(err), "err");
+  }
+});
+
+setMode("signup");   // the page opens on Sign up
+
+/* ---------- already logged in? go straight to the app ---------- */
+onAuthStateChanged(auth, user => {
+  if (user && !working && $("overlay").hidden) goToApp("Welcome back! Opening Ishanth AI…");
+});
+</script>
+</body>
+</html>

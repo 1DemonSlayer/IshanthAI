@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en" class="authwait">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ishanth AI</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22lg%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23ff9a00%22/%3E%3Cstop%20offset%3D%22.55%22%20stop-color%3D%22%23f43f5e%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23a855f7%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2220%22%20fill%3D%22url%28%23lg%29%22/%3E%3Crect%20x%3D%2226%22%20y%3D%2229%22%20width%3D%2212%22%20height%3D%2225%22%20rx%3D%226%22%20fill%3D%22%23fff%22/%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2217%22%20r%3D%228%22%20fill%3D%22%23fff%22/%3E%3Cpath%20fill%3D%22%23fff%22%20d%3D%22M38%2021L46%2027L36%2025Z%22/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#ffffff;--side:#f0f4f9;--input:#f0f4f9;--ubub:#e9eef6;--ink:#1f1f1f;--muted:#5f6368;
+  --line:#dfe3e8;--hover:#e2e8f0;--code:#f0f4f9;--accent:#0b57d0;--err:#b3261e;color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#131314;--side:#1e1f20;--input:#1e1f20;--ubub:#282a2c;--ink:#e3e3e3;--muted:#9aa0a6;
+  --line:#3c4043;--hover:#333537;--code:#1e1f20;--accent:#a8c7fa;--err:#f2b8b5;color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{font-family:"Google Sans","Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);display:flex;overflow:hidden}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+html.authwait body{visibility:hidden}
+
+/* sidebar */
+#side{width:280px;background:var(--side);display:flex;flex-direction:column;padding:12px;gap:8px;transition:margin .2s;flex-shrink:0}
+#side.closed{margin-left:-280px}
+.icon{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:20px}
+.icon:hover{background:var(--hover)}
+#newChat{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:20px;background:var(--hover);font-size:.92rem;margin-top:6px}
+#list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:2px;margin-top:8px}
+.label{font-size:.8rem;color:var(--muted);padding:8px 12px 4px}
+.item{display:flex;align-items:center;border-radius:20px;padding:0 6px 0 14px}
+.item:hover,.item.on{background:var(--hover)}
+.item span{flex:1;padding:9px 0;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;cursor:pointer}
+.item .del{opacity:0;width:28px;height:28px;border-radius:50%;color:var(--muted)}
+.item:hover .del{opacity:1}
+.item .del:hover{background:var(--line)}
+.sidefoot{display:flex;flex-direction:column;gap:4px}
+.sidefoot button{padding:9px 12px;border-radius:20px;font-size:.85rem;text-align:left}
+.sidefoot button:hover{background:var(--hover)}
+
+/* main */
+main{flex:1;display:flex;flex-direction:column;min-width:0;height:100%}
+header{display:flex;align-items:center;gap:6px;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top))}
+header .logo{flex-shrink:0;margin-left:2px}
+header .title{font-size:1.25rem;margin-right:auto;margin-left:4px}
+select{background:var(--input);border:0;border-radius:18px;padding:8px 12px;font-size:.85rem;max-width:46vw}
+#chat{flex:1;overflow-y:auto;scroll-behavior:smooth}
+.wrap{max-width:760px;margin:0 auto;padding:10px 18px 24px;display:flex;flex-direction:column;gap:22px;min-height:100%}
+.hello{margin:auto 0;padding-top:8vh}
+.hello h1{font-size:clamp(2rem,6vw,3.4rem);font-weight:500;line-height:1.15;letter-spacing:-.02em;
+  background:linear-gradient(90deg,#ff9a00,#f43f5e 50%,#a855f7);-webkit-background-clip:text;background-clip:text;color:transparent;width:fit-content}
+.hello h2{font-size:clamp(1.6rem,5vw,3rem);font-weight:500;color:var(--muted);opacity:.7;letter-spacing:-.02em;margin-top:2px}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:34px}
+.chips button{background:var(--input);border-radius:16px;padding:14px 16px;font-size:.9rem;text-align:left;max-width:210px;line-height:1.35}
+.chips button:hover{background:var(--hover)}
+.row{display:flex;gap:14px}
+.row.user{justify-content:flex-end}
+.row.user .body{background:var(--ubub);padding:11px 18px;border-radius:22px 22px 6px 22px;max-width:80%}
+.avatar{width:30px;height:30px;flex-shrink:0;margin-top:2px}
+.body{line-height:1.7;font-size:1rem;overflow-wrap:anywhere;white-space:pre-wrap;min-width:0}
+.row.bot .body{flex:1}
+.row.err .body{color:var(--err)}
+.body pre{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0;overflow-x:auto;white-space:pre;font-size:.86rem;line-height:1.5}
+.body code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em}
+.body :not(pre)>code{background:var(--code);border-radius:5px;padding:2px 6px}
+.think{display:flex;gap:5px;padding:10px 0}
+.think i{width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,#ff9a00,#f43f5e);animation:p 1.1s infinite}
+.think i:nth-child(2){animation-delay:.15s}.think i:nth-child(3){animation-delay:.3s}
+@keyframes p{0%,70%,100%{transform:scale(.6);opacity:.4}35%{transform:scale(1);opacity:1}}
+
+/* composer */
+.composer{padding:8px 16px;padding-bottom:max(14px,env(safe-area-inset-bottom))}
+.box{max-width:760px;margin:0 auto;background:var(--input);border-radius:28px;display:flex;align-items:flex-end;gap:6px;padding:8px 8px 8px 8px;position:relative}
+textarea{flex:1;padding-left:6px;background:none;border:0;resize:none;outline:none;max-height:180px;padding:10px 0;line-height:1.5;font-size:1rem}
+textarea::placeholder{color:var(--muted)}
+.plus{width:42px;height:42px;border-radius:50%;font-size:26px;line-height:1;display:grid;place-items:center;flex-shrink:0}
+.plus:hover,.menu button:hover,.chip button:hover{background:var(--hover)}
+.menu{position:absolute;left:0;bottom:calc(100% + 10px);background:var(--bg);border-radius:20px;box-shadow:0 4px 28px rgba(0,0,0,.28);padding:8px;min-width:250px;z-index:10}
+.menu[hidden]{display:none}
+.menu button{display:flex;align-items:center;gap:14px;width:100%;padding:11px 14px;border-radius:12px;font-size:.95rem;text-align:left}
+.menu hr{border:0;border-top:1px solid var(--line);margin:6px 8px}
+.menu .tick{margin-left:auto;color:var(--accent)}
+.tray{max-width:760px;margin:0 auto 8px;display:flex;flex-wrap:wrap;gap:8px}
+.tray:empty{display:none}
+.chip{display:flex;align-items:center;gap:8px;background:var(--input);border-radius:14px;padding:6px 6px 6px 10px;font-size:.85rem;max-width:230px}
+.chip img{width:36px;height:36px;object-fit:cover;border-radius:8px}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip button{width:24px;height:24px;border-radius:50%;flex-shrink:0;color:var(--muted)}
+.atts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.thumb{width:110px;height:110px;object-fit:cover;border-radius:12px}
+.chip2{background:var(--bg);border-radius:12px;padding:6px 10px;font-size:.85rem}
+.gen{display:block;width:min(512px,100%);border-radius:16px;background:var(--code)}
+#send{width:42px;height:42px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;flex-shrink:0}
+#send:disabled{opacity:.3;cursor:not-allowed}
+.note{text-align:center;font-size:.72rem;color:var(--muted);margin-top:8px}
+
+dialog{margin:auto;border:0;border-radius:24px;padding:26px;width:min(92vw,440px);background:var(--bg);color:var(--ink);box-shadow:0 8px 40px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+dialog h2{font-size:1.3rem;font-weight:500;margin-bottom:8px}
+dialog p{font-size:.9rem;color:var(--muted);line-height:1.55;margin-bottom:14px}
+dialog a{color:var(--accent)}
+dialog input{width:100%;background:var(--input);border:0;border-radius:14px;padding:13px 16px;margin-bottom:16px;outline:none}
+.acts{display:flex;gap:8px;justify-content:flex-end}
+.acts button{padding:10px 20px;border-radius:20px;font-size:.92rem}
+.acts .go{background:var(--accent);color:var(--bg);font-weight:500}
+.acts button:not(.go):hover{background:var(--hover)}
+
+/* memory dialog */
+#memList{max-height:50vh;overflow-y:auto;margin-bottom:14px}
+#memList p{margin-bottom:0}
+.memi{display:flex;align-items:flex-start;gap:8px;padding:8px 8px 8px 12px;border-radius:12px;background:var(--input);margin-bottom:6px;font-size:.9rem;line-height:1.4}
+.memi span{flex:1;overflow-wrap:anywhere;padding-top:2px}
+.memi button{color:var(--muted);width:24px;height:24px;border-radius:50%;flex-shrink:0}
+.memi button:hover{background:var(--hover)}
+
+/* profile, welcome bar, logout screen */
+[hidden]{display:none!important}
+header{position:relative}
+.prof{position:relative;flex-shrink:0}
+.av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;overflow:hidden;font-weight:600;font-size:1.05rem;color:#fff;
+  background:linear-gradient(135deg,#ff9a00,#f43f5e 55%,#a855f7);background-size:cover;background-position:center}
+.av.has{color:transparent}
+.pmenu{position:absolute;right:0;top:calc(100% + 6px);width:min(290px,88vw);background:var(--bg);border-radius:22px;box-shadow:0 4px 28px rgba(0,0,0,.28);padding:20px 12px 8px;z-index:20;text-align:center}
+.pmenu .av{width:76px;height:76px;font-size:2.1rem;margin:0 auto 10px}
+.pname{font-size:1.1rem;font-weight:500;overflow-wrap:anywhere}
+.pmail{font-size:.8rem;color:var(--muted);overflow-wrap:anywhere;margin:2px 0 14px}
+.pmenu .act{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;border-radius:12px;font-size:.92rem;text-align:left}
+.pmenu .act:hover{background:var(--hover)}
+.pmenu hr{border:0;border-top:1px solid var(--line);margin:6px 8px}
+#welcome{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 16px;padding:0 20px 8px;font-size:.86rem;color:var(--muted)}
+#welcome b{color:var(--ink);font-weight:500}
+#clock{display:flex;gap:10px;font-variant-numeric:tabular-nums}
+#lo{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:20px;text-align:center}
+#lo p{color:var(--muted);font-size:1rem;overflow-wrap:anywhere}
+.lspin{width:46px;height:46px;border:4px solid var(--accent);border-right-color:transparent;border-radius:50%;animation:lr .7s linear infinite!important}
+@keyframes lr{to{transform:rotate(360deg)}}
+@media (max-width:480px){
+  header .title{display:none}
+  header .logo{margin-right:auto}
+  select{max-width:42vw}
+}
+
+@media (max-width:760px){
+  #side{position:fixed;z-index:5;inset:0 auto 0 0;height:100%;box-shadow:0 0 30px rgba(0,0,0,.3)}
+  .row.user .body{max-width:90%}
+}
+/* phone fixes: show delete buttons without hover, fit screen when the browser bar or keyboard changes height */
+@media (hover:none){.item .del{opacity:1}}
+@supports (height:100dvh){html,body{height:100dvh}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9a00"/><stop offset=".55" stop-color="#f43f5e"/><stop offset="1" stop-color="#a855f7"/></linearGradient><symbol id="spark" viewBox="0 0 64 64"><rect width="64" height="64" rx="20" fill="url(#lg)"/><rect x="26" y="29" width="12" height="25" rx="6" fill="#fff"/><circle cx="32" cy="17" r="8" fill="#fff"/><path fill="#fff" d="M38 21L46 27L36 25Z"/></symbol></defs></svg>
+
+<aside id="side">
+  <button class="icon" id="menu2" aria-label="Close menu">☰</button>
+  <button id="newChat"><span>＋</span> New chat</button>
+  <div class="label">Recent</div>
+  <div id="list"></div>
+  <div class="sidefoot">
+    <button id="memBtn">🧠 Memory</button>
+    <button id="themeBtn">◐ Theme</button>
+  </div>
+</aside>
+
+<main>
+  <header>
+    <button class="icon" id="menu" aria-label="Open menu">☰</button>
+    <svg class="logo" width="30" height="30"><use href="#spark"/></svg><span class="title">Ishanth AI</span>
+    <select id="model" aria-label="Model"></select>
+    <div class="prof">
+      <button class="av" id="avBtn" type="button" aria-label="Open profile" aria-haspopup="true" aria-expanded="false">U</button>
+      <div class="pmenu" id="pMenu" hidden>
+        <div class="av" id="avBig">U</div>
+        <div class="pname" id="pName"></div>
+        <div class="pmail" id="pMail"></div>
+        <input type="file" id="avFile" accept="image/*" hidden>
+        <button type="button" class="act" id="pPhoto">📷 Change profile photo</button>
+        <button type="button" class="act" id="pRemove" hidden>🗑 Remove photo</button>
+        <hr>
+        <button type="button" class="act" id="pLogout">⎋ Log out</button>
+      </div>
+    </div>
+  </header>
+  <div id="welcome"><span>Welcome <b id="wName"></b></span><span id="clock"><span id="dt"></span><span id="tm"></span></span></div>
+  <div id="chat"><div class="wrap" id="wrap"></div></div>
+  <form class="composer" id="form">
+    <div class="tray" id="tray"></div>
+    <div class="box">
+      <button id="plus" class="plus" type="button" aria-label="Add files and tools" aria-haspopup="true">＋</button>
+      <div class="menu" id="addMenu" hidden>
+        <button type="button" id="mUpload">📎 Upload files</button>
+        <hr>
+        <button type="button" id="mImage">🖼 Create image <span class="tick" id="tick"></span></button>
+      </div>
+      <input type="file" id="file" multiple hidden accept="image/*,.pdf,.docx,.doc,text/*,.json,.md,.csv,.tsv,.js,.jsx,.ts,.tsx,.py,.java,.c,.cpp,.h,.cs,.go,.rs,.php,.rb,.sh,.sql,.xml,.yml,.yaml,.log,.ini,.toml">
+      <textarea id="input" rows="1" placeholder="Ask Ishanth AI" aria-label="Message"></textarea>
+      <button id="send" type="submit" aria-label="Send">➤</button>
+    </div>
+    <div class="note">Ishanth AI can make mistakes, so double-check answers.</div>
+  </form>
+</main>
+
+<div id="lo" hidden role="status" aria-live="polite"><i class="lspin"></i><p id="loText">Logging out…</p></div>
+
+<dialog id="memDlg">
+  <h2>Memory</h2>
+  <p>Things Ishanth AI remembers about you. Tell it "remember ..." to add more, or "forget ..." to remove something.</p>
+  <div id="memList"></div>
+  <div class="acts"><button type="button" id="memClear">Clear all</button><button type="button" class="go" id="memClose">Done</button></div>
+</dialog>
+
+<script>
+// safety net: if login check can't finish (e.g. firebase-config.js is wrong), go back to the login page
+setTimeout(() => { if (document.documentElement.classList.contains("authwait")) location.replace("index.html") }, 10000);
+</script>
+<script>
+// ============================================================
+//  PASTE YOUR GROQ API KEY BETWEEN THE QUOTES (get one at console.groq.com/keys)
+const GROQ_API_KEY = "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";
+
+
+// ============================================================
+
+(() => {
+  const $ = id => document.getElementById(id);
+  const API = "https://api.groq.com/openai/v1";
+  const LS = {
+    get(k){ try { return localStorage.getItem(k) } catch { return null } },
+    set(k,v){ try { localStorage.setItem(k,v) } catch {} }
+  };
+  const key = GROQ_API_KEY.trim();
+  let chats = []; try { chats = JSON.parse(LS.get("chats") || "[]") } catch {}
+  let cur = null, busy = false;
+
+  const wrap = $("wrap"), chat = $("chat"), input = $("input"), send = $("send"), model = $("model");
+  const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const strip = (k, v) => k === "data" ? undefined : v;
+  const saveChats = () => { LS.set("chats", JSON.stringify(chats, strip)); };
+  const sparkle = '<svg class="avatar"><use href="#spark"/></svg>';
+
+  /* ---------- memory ---------- */
+  // The exact answer given when someone asks who built the AI. Edit this line to change it.
+  const CREATOR = "I was created by you—RA Ishanth, the developer who built me. How can I assist you further?";
+  let mem = []; try { mem = JSON.parse(LS.get("memory") || "[]") } catch {}
+  if (!Array.isArray(mem)) mem = [];
+  const saveMem = () => LS.set("memory", JSON.stringify(mem));
+
+  function remember(f){
+    f = f.replace(/\s+/g, " ").trim().replace(/[.!\s]+$/, "").slice(0, 200);
+    if (f.length < 2) return false;
+    if (!mem.some(m => m.toLowerCase() === f.toLowerCase())) { mem.push(f); if (mem.length > 50) mem.shift(); saveMem(); }
+    return true;
+  }
+  // quietly picks up facts the user mentions about themselves
+  function learn(text){
+    let m;
+    if ((m = text.match(/\bmy name is\s+([^.,!?\n]+?)(?=\s+and\s|[.,!?\n]|$)/i))) remember("The user's name is " + m[1]);
+    if ((m = text.match(/\bcall me\s+([^.,!?\n]+?)(?=\s+and\s|[.,!?\n]|$)/i))) remember("The user wants to be called " + m[1]);
+    if ((m = text.match(/\bi(?:'m| am)\s+(\d{1,2})\s+years?\s+old/i))) remember("The user is " + m[1] + " years old");
+    if ((m = text.match(/\bi\s+(?:live|stay)\s+in\s+([^.,!?\n]+)/i))) remember("The user lives in " + m[1]);
+    if ((m = text.match(/\bi\s+(work|study)\s+((?:as|at|in)\s+[^.,!?\n]+)/i))) remember("The user " + m[1].toLowerCase() + "s " + m[2]);
+    if ((m = text.match(/\bi\s+(like|love|prefer|hate|enjoy)\s+([^.,!?\n]+)/i))) remember("The user " + m[1].toLowerCase() + "s " + m[2]);
+  }
+  // answers handled in the browser without calling the AI (identity + memory commands). Returns text or null.
+  function localReply(text){
+    const t = text.trim(); let m;
+    if (/\bwho\s+(?:built|made|created|developed|designed|programmed|trained)\s+(?:you|u)\b|\bwho(?:'s|\s+is|\s+are)\s+(?:your|ur)\s+(?:creator|developer|maker|builder|owner|founder)\b|\bwho\s+(?:is|are)\s+(?:the\s+)?(?:creator|developer|maker)\s+of\s+(?:you|this)\b/i.test(t)) return CREATOR;
+    if (/^(?:please\s+)?forget\s+(?:everything|all|my memory|my memories|all memory|memory|memories)\b/i.test(t)) {
+      const n = mem.length; mem = []; saveMem();
+      return n ? "Done, I've cleared everything I remembered about you." : "My memory is already empty.";
+    }
+    if ((m = t.match(/^(?:please\s+)?forget\s+(?:that\s+)?(.+)/i))) {
+      const q = m[1].replace(/[.!?]+$/, "").trim().toLowerCase(), before = mem.length;
+      if (q) mem = mem.filter(x => !x.toLowerCase().includes(q));
+      if (mem.length < before) { saveMem(); return "Okay, I've forgotten that." }
+    }
+    if ((m = t.match(/^(?:please\s+)?(?:remember|memorize)\s*(?:that|this)?\s*[:,]?\s+(.+)/i)) && remember(m[1]))
+      return "Got it! I've saved that to my memory: " + m[1].replace(/[.!\s]+$/, "");
+    if (/\bwhat\s+(?:do\s+you\s+)?(?:remember|know)\s+about\s+me\b|\bshow\s+(?:me\s+)?(?:my\s+)?memor(?:y|ies)\b/i.test(t))
+      return mem.length ? "Here's what I remember about you:\n" + mem.map(x => "• " + x).join("\n")
+                        : "I don't have anything saved about you yet. Tell me something and say \"remember ...\".";
+    return null;
+  }
+  function systemPrompt(){
+    let s = "You are Ishanth AI, a helpful, friendly assistant. Keep answers clear and concise. When the user attaches a document (PDF, Word or text), read it carefully, briefly summarize it, point out any problems, questions or tasks in it, and give clear step-by-step solutions or answers. You were created by RA Ishanth. If anyone asks who built, made or created you, answer exactly: \"" + CREATOR + "\"";
+    if (window.appUser) s += " The user's username is " + window.appUser + ".";
+    if (mem.length) s += "\n\nThings the user has told you (use them naturally when relevant, and don't list them unless asked):\n" + mem.map(x => "- " + x).join("\n");
+    return s;
+  }
+  const memDlg = $("memDlg"), memList = $("memList");
+  function renderMem(){
+    memList.innerHTML = "";
+    if (!mem.length) { const p = document.createElement("p"); p.textContent = "Nothing saved yet."; memList.appendChild(p); return }
+    mem.forEach((f, i) => {
+      const d = document.createElement("div"); d.className = "memi";
+      const sp = document.createElement("span"); sp.textContent = f;
+      const x = document.createElement("button"); x.type = "button"; x.textContent = "✕"; x.setAttribute("aria-label", "Forget this");
+      x.onclick = () => { mem.splice(i, 1); saveMem(); renderMem() };
+      d.append(sp, x); memList.appendChild(d);
+    });
+  }
+  $("memBtn").onclick = () => { renderMem(); memDlg.showModal(); if (innerWidth < 760) side.classList.add("closed") };
+  $("memClear").onclick = () => { if (mem.length && confirm("Clear everything I remember about you?")) { mem = []; saveMem(); renderMem() } };
+  $("memClose").onclick = () => memDlg.close();
+
+  /* theme */
+  const t = LS.get("theme") || (matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light");
+  document.documentElement.dataset.theme = t;
+  $("themeBtn").onclick = () => {
+    const n = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = n; LS.set("theme", n);
+  };
+
+  /* sidebar */
+  const side = $("side");
+  if (innerWidth < 760) side.classList.add("closed");
+  $("menu").onclick = () => side.classList.toggle("closed");
+  $("menu2").onclick = () => side.classList.add("closed");
+
+  /* simple markdown */
+  function md(text){
+    return text.split("```").map((p,i) => {
+      if (i % 2) return "<pre><code>" + esc(p.replace(/^[^\n]*\n/, "").replace(/\n$/, "")) + "</code></pre>";
+      return esc(p)
+        .replace(/^#{1,6}\s*(.+)$/gm, "<strong>$1</strong>")
+        .replace(/^\s*[*-]\s+/gm, "• ")
+        .replace(/`([^`\n]+)`/g, "<code>$1</code>")
+        .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
+    }).join("");
+  }
+
+  /* rendering */
+  function addRow(kind, html){
+    const r = document.createElement("div");
+    r.className = "row " + kind;
+    r.innerHTML = (kind === "user" ? "" : sparkle) + '<div class="body">' + html + "</div>";
+    wrap.appendChild(r);
+    chat.scrollTop = chat.scrollHeight;
+    return r.querySelector(".body");
+  }
+  function hello(){
+    wrap.innerHTML = '<div class="hello"><svg class="avatar" style="display:block;width:60px;height:60px;margin:0 0 16px"><use href="#spark"/></svg><h1>Hello there</h1><h2>How can I help you today?</h2><div class="chips"></div></div>';
+    ["Explain how the internet works in simple words","Write a Python function to check for a prime number","Give me 5 JavaScript project ideas","Help me write a polite email asking for a day off"]
+      .forEach(s => { const b = document.createElement("button"); b.type = "button"; b.textContent = s;
+        b.onclick = () => { input.value = s; $("form").requestSubmit() }; wrap.querySelector(".chips").appendChild(b) });
+  }
+  function show(){
+    wrap.innerHTML = "";
+    const c = chats.find(x => x.id === cur);
+    if (!c || !c.msgs.length) hello();
+    else c.msgs.forEach(m => addRow(m.role === "user" ? "user" : "bot", m.role === "user" ? userHtml(m) : m.img ? '<img class="gen" src="' + esc(m.img) + '" alt="' + esc(m.text) + '">' : md(m.text)));
+    renderList();
+  }
+  function renderList(){
+    const l = $("list"); l.innerHTML = "";
+    chats.forEach(c => {
+      const d = document.createElement("div"); d.className = "item" + (c.id === cur ? " on" : "");
+      const s = document.createElement("span"); s.textContent = c.title; s.onclick = () => { if (busy) return; cur = c.id; show(); if (innerWidth < 760) side.classList.add("closed") };
+      const x = document.createElement("button"); x.className = "del"; x.textContent = "✕"; x.setAttribute("aria-label","Delete chat");
+      x.onclick = () => { if (busy) return; chats = chats.filter(z => z.id !== c.id); if (cur === c.id) cur = null; saveChats(); show() };
+      d.append(s, x); l.appendChild(d);
+    });
+  }
+  $("newChat").onclick = () => { if (busy) return; cur = null; show(); input.focus(); if (innerWidth < 760) side.classList.add("closed") };
+
+  /* models */
+  const PREF = ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "llama-3.1-8b-instant"];
+  async function loadModels(){
+    let names = [];
+    if (key) {
+      try {
+        const r = await fetch(API + "/models", { headers: { Authorization: "Bearer " + key } });
+        const j = await r.json();
+        names = (j.data || []).filter(m => m.active !== false).map(m => m.id)
+          .filter(n => !/whisper|tts|guard|orpheus|playai|safeguard|embed/i.test(n));
+      } catch {}
+    }
+    if (!names.length) names = PREF.slice();
+    const rank = n => { const i = PREF.indexOf(n); return i < 0 ? 99 : i };
+    names.sort((x, y) => rank(x) - rank(y) || x.localeCompare(y));
+    model.innerHTML = names.map(n => `<option value="${n}">${n}</option>`).join("");
+    const saved = LS.get("gmodel");
+    model.value = names.includes(saved) ? saved : names[0];
+  }
+  model.onchange = () => LS.set("gmodel", model.value);
+
+  function notice(){
+    wrap.querySelector(".hello")?.remove();
+    const b = addRow("bot", ""); b.parentElement.classList.add("err");
+    b.textContent = "API key missing. Open ai.html, find GROQ_API_KEY at the top of the script, and paste your Groq key between the quotes.";
+  }
+
+  /* typewriter */
+  function type(el, text){
+    return new Promise(res => {
+      let i = 0; const step = Math.max(2, Math.ceil(text.length / 150));
+      const id = setInterval(() => {
+        i = Math.min(text.length, i + step);
+        el.innerHTML = md(text.slice(0, i)); chat.scrollTop = chat.scrollHeight;
+        if (i >= text.length) { clearInterval(id); res() }
+      }, 16);
+    });
+  }
+
+  /* attachments + plus menu */
+  let imgMode = false, pending = [];
+  const tray = $("tray"), menu = $("addMenu"), fileIn = $("file");
+  const TEXT_EXT = /\.(txt|md|csv|tsv|json|jsx?|tsx?|py|html|css|java|c|cpp|h|cs|go|rs|php|rb|sh|sql|xml|ya?ml|log|ini|toml)$/i;
+
+  function userHtml(m){
+    const f = (m.files || []).map(x => x.data ? '<img class="thumb" src="' + x.data + '" alt="' + esc(x.name) + '">'
+      : '<span class="chip2">' + (x.kind === "image" ? "🖼 " : "📄 ") + esc(x.name) + "</span>").join("");
+    return (f ? '<div class="atts">' + f + "</div>" : "") + esc(m.text);
+  }
+  function flash(msg){
+    const n = document.querySelector(".note");
+    if (flash.base === undefined) flash.base = n.textContent;
+    n.textContent = msg; clearTimeout(flash.t);
+    flash.t = setTimeout(() => n.textContent = flash.base, 5000);
+  }
+  function chip(label, thumb, onRemove){
+    const d = document.createElement("div"); d.className = "chip";
+    if (thumb) { const i = document.createElement("img"); i.src = thumb; i.alt = ""; d.appendChild(i) }
+    const sp = document.createElement("span"); sp.textContent = label; d.appendChild(sp);
+    const x = document.createElement("button"); x.type = "button"; x.textContent = "✕"; x.setAttribute("aria-label", "Remove"); x.onclick = onRemove;
+    d.appendChild(x); tray.appendChild(d);
+  }
+  function setImgMode(v){
+    imgMode = v; $("tick").textContent = v ? "✓" : "";
+    input.placeholder = v ? "Describe the image you want" : "Ask Ishanth AI";
+    renderTray();
+  }
+  function renderTray(){
+    tray.innerHTML = "";
+    if (imgMode) chip("Create image", null, () => setImgMode(false));
+    pending.forEach((f, i) => chip(f.name, f.kind === "image" ? f.data : null, () => { pending.splice(i, 1); renderTray() }));
+  }
+  function shrink(f){
+    return new Promise((res, rej) => {
+      const u = URL.createObjectURL(f), im = new Image();
+      im.onload = () => {
+        const k = Math.min(1, 1280 / Math.max(im.width, im.height)), cv = document.createElement("canvas");
+        cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k);
+        cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(u); res(cv.toDataURL("image/jpeg", .85));
+      };
+      im.onerror = () => { URL.revokeObjectURL(u); rej(new Error("bad image")) };
+      im.src = u;
+    });
+  }
+  /* ---------- PDF + Word readers (libraries load only when needed) ---------- */
+  const MAXDOC = 24000;
+  const PDFJS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+  const loadScript = src => new Promise((res, rej) => {
+    const el = document.createElement("script"); el.src = src; el.onload = res;
+    el.onerror = () => rej(new Error("could not load the reader library (check your internet)"));
+    document.head.appendChild(el);
+  });
+  async function readPdf(f){
+    if (!window.pdfjsLib) { await loadScript(PDFJS + "pdf.min.js"); pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + "pdf.worker.min.js"; }
+    const pdf = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise;
+    let out = "";
+    for (let i = 1; i <= pdf.numPages && out.length < MAXDOC; i++) {
+      const tc = await (await pdf.getPage(i)).getTextContent();
+      out += "\n--- Page " + i + " ---\n" + tc.items.map(x => x.str).join(" ");
+    }
+    return out.trim();
+  }
+  async function readDocx(f){
+    if (!window.mammoth) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js");
+    return (await mammoth.extractRawText({ arrayBuffer: await f.arrayBuffer() })).value.trim();
+  }
+  const isDoc = n => /\.(pdf|docx?)$/i.test(n);
+  const defaultAsk = files => files.some(x => isDoc(x.name))
+    ? "Please analyze the attached document. Summarize it, point out any problems, questions or tasks in it, and give clear solutions or answers."
+    : "Please look at the attached file(s).";
+
+  async function addFile(f){
+    if (pending.length >= 5) return flash("You can attach up to 5 files.");
+    try {
+      if (f.type.startsWith("image/")) pending.push({ name: f.name, kind: "image", data: await shrink(f) });
+      else if (/\.pdf$/i.test(f.name) || f.type === "application/pdf" || /\.docx$/i.test(f.name)) {
+        flash("Reading " + f.name + "…");
+        let t = /\.pdf$/i.test(f.name) || f.type === "application/pdf" ? await readPdf(f) : await readDocx(f);
+        if (!t) { flash(f.name + ": no readable text found (it may be a scanned document)."); return }
+        if (t.length > MAXDOC) { t = t.slice(0, MAXDOC) + "\n…[document truncated]"; flash(f.name + " is long, so only the first part will be analyzed.") }
+        pending.push({ name: f.name, kind: "text", content: t });
+      }
+      else if (/\.doc$/i.test(f.name)) flash("Old .doc files aren't supported. Save it as .docx or PDF and upload again.");
+      else if (f.type.startsWith("text/") || f.type === "application/json" || TEXT_EXT.test(f.name)) {
+        let t = await f.text(); if (t.length > 20000) t = t.slice(0, 20000) + "\n…[truncated]";
+        pending.push({ name: f.name, kind: "text", content: t });
+      } else flash(f.name + ": this file type isn't supported yet. Use PDF, Word (.docx), images or text/code files.");
+    } catch (e) { flash("Could not read " + f.name + (e && e.message ? ": " + e.message : "")) }
+    renderTray();
+  }
+  $("plus").onclick = e => { e.stopPropagation(); menu.hidden = !menu.hidden };
+  document.addEventListener("click", e => { if (!menu.contains(e.target)) menu.hidden = true });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") menu.hidden = true });
+  $("mUpload").onclick = () => { menu.hidden = true; fileIn.click() };
+  $("mImage").onclick = () => { menu.hidden = true; setImgMode(!imgMode); input.focus() };
+  fileIn.onchange = async () => { for (const f of fileIn.files) await addFile(f); fileIn.value = "" };
+
+  function buildContext(msgs){
+    let vision = false;
+    const clean = msgs.filter(m => !m.img && !m.imgReq), last = clean.length - 1;
+    const messages = [{ role: "system", content: systemPrompt() }];
+    clean.forEach((m, i) => {
+      if (m.role !== "user") { messages.push({ role: "assistant", content: m.text }); return }
+      let text = m.text; const imgs = [];
+      (m.files || []).forEach(f => {
+        if (f.kind === "text") text += "\n\n[Attached file: " + f.name + "]\n" + f.content;
+        else if (f.data && i === last) imgs.push(f.data);
+        else text += "\n\n[Attached image: " + f.name + "]";
+      });
+      if (imgs.length) { vision = true; messages.push({ role: "user", content: [{ type: "text", text }, ...imgs.map(u => ({ type: "image_url", image_url: { url: u } }))] }) }
+      else messages.push({ role: "user", content: text });
+    });
+    return { messages, vision };
+  }
+
+  /* send */
+  $("form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if ((!text && !pending.length) || busy) return;
+    const isImg = imgMode || /^\/image\s/i.test(text);
+    if (isImg && !text) return;
+    const ensureChat = () => {
+      let c = chats.find(x => x.id === cur);
+      if (!c) { c = { id: Date.now(), title: (text.replace(/^\/image\s+/i, "") || (pending[0] && pending[0].name) || "New chat").slice(0, 40), msgs: [] }; chats.unshift(c); cur = c.id; wrap.innerHTML = ""; renderList() }
+      return c;
+    };
+    if (!isImg && !pending.length) {                 // identity + memory commands answered instantly
+      const r = localReply(text);
+      if (r) {
+        const c = ensureChat();
+        c.msgs.push({ role: "user", text, files: [] }); addRow("user", esc(text));
+        input.value = ""; resize(); busy = true; send.disabled = true;
+        c.msgs.push({ role: "assistant", text: r }); saveChats();
+        await type(addRow("bot", ""), r);
+        busy = false; send.disabled = false; renderList(); input.focus();
+        return;
+      }
+    }
+    if (!isImg && (!key || key.startsWith("PASTE_"))) { notice(); return; }
+    if (!isImg) learn(text);                          // remember facts the user mentions
+    let c = ensureChat();
+    if (isImg) {                          // free image generation (Pollinations, no key)
+      const prompt = text.replace(/^\/image\s+/i, "");
+      pending = []; renderTray();
+      c.msgs.push({ role: "user", text: prompt, imgReq: true });
+      addRow("user", esc(prompt));
+      input.value = ""; resize();
+      busy = true; send.disabled = true;
+      const b = addRow("bot", '<div class="think"><i></i><i></i><i></i></div>');
+      const url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt) + "?width=1024&height=1024&nologo=true&seed=" + Math.floor(Math.random() * 1e6);
+      const done = () => { busy = false; send.disabled = false; renderList(); input.focus(); chat.scrollTop = chat.scrollHeight };
+      const img = new Image(); img.className = "gen"; img.alt = prompt;
+      img.onload = () => { b.innerHTML = ""; b.appendChild(img); c.msgs.push({ role: "assistant", text: prompt, img: url }); saveChats(); done() };
+      img.onerror = () => { c.msgs.pop(); b.parentElement.classList.add("err"); b.textContent = "Image failed. The free service allows about one image every 15 seconds, so wait a moment and try again."; done() };
+      img.src = url;
+      return;
+    }
+    const files = pending.splice(0); renderTray();
+    c.msgs.push({ role: "user", text: text || defaultAsk(files), files });
+    addRow("user", userHtml(c.msgs[c.msgs.length - 1]));
+    input.value = ""; resize();
+    busy = true; send.disabled = true;
+    const body = addRow("bot", '<div class="think"><i></i><i></i><i></i></div>');
+    try {
+      const built = buildContext(c.msgs);
+      let useModel = model.value;
+      if (built.vision && !/llama-4|vision/i.test(useModel)) {
+        const vm = [...model.options].map(o => o.value).find(v => /llama-4|vision/i.test(v));
+        if (!vm) throw new Error("Image understanding is not available on your Groq key. Attach text or code files instead.");
+        useModel = vm;
+      }
+      const call = () => fetch(API + "/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
+        body: JSON.stringify({ model: useModel, messages: built.messages })
+      });
+      let res = await call();
+      let j = await res.json().catch(() => ({}));
+      if (!res.ok && /decommission|not found|does not exist|no longer/i.test(j.error?.message || "")) {
+        const alt = PREF.find(n => n !== model.value && [...model.options].some(o => o.value === n));
+        if (alt && !built.vision) { useModel = alt; model.value = alt; LS.set("gmodel", alt); res = await call(); j = await res.json().catch(() => ({})); }
+      }
+      if (!res.ok) throw new Error(j.error?.message || res.status + " " + res.statusText);
+      const reply = (j.choices?.[0]?.message?.content || "").replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+      if (!reply) throw new Error("The model returned no text. Try again or pick another model.");
+      c.msgs.push({ role: "assistant", text: reply }); saveChats();
+      await type(body, reply);
+    } catch (err) {
+      c.msgs.pop();                       // remove failed question so the chat stays valid
+      input.value = text; pending = files.concat(pending); renderTray();   // give the text and files back
+      let hint = "";
+      if (err instanceof TypeError) hint = " Check your internet connection. If you opened this file from a phone or an app, open it in Chrome instead.";
+      else if (/invalid api key|unauthorized|authentication/i.test(err.message)) hint = " Check GROQ_API_KEY in ai.html.";
+      else if (/rate limit|quota|too many|too large|tokens/i.test(err.message)) hint = " Free limit reached or the document is too large. Wait a minute, choose a smaller model, or upload a shorter file.";
+      else if (/model/i.test(err.message)) hint = " Pick a different model from the list at the top.";
+      body.parentElement.classList.add("err");
+      body.textContent = "Error: " + err.message + hint;
+    } finally {
+      busy = false; send.disabled = false; renderList(); input.focus();
+    }
+  });
+
+  function resize(){ input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 180) + "px" }
+  input.addEventListener("input", resize);
+  input.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("form").requestSubmit() } });
+
+  show();
+  loadModels();
+  if (!key || key.startsWith("PASTE_")) notice();
+})();
+</script>
+<script type="module">
+// Login guard + profile (username, photo, logout) + welcome bar with date and time
+import { auth } from "./firebase-config.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(k){ try { return localStorage.getItem(k) } catch { return null } },
+  set(k, v){ try { localStorage.setItem(k, v); return true } catch { return false } },
+  del(k){ try { localStorage.removeItem(k) } catch {} }
+};
+let user = null, username = "", avKey = "", leaving = false;
+
+/* ---- date and time ---- */
+function tick(){
+  const d = new Date();
+  $("dt").textContent = d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  $("tm").textContent = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" });
+}
+tick(); setInterval(tick, 1000);
+
+/* ---- avatar: first letter of the username, or the uploaded photo ---- */
+function paint(){
+  const img = user ? store.get(avKey) : null;
+  document.querySelectorAll(".av").forEach(el => {
+    el.textContent = (username[0] || "U").toUpperCase();
+    el.style.backgroundImage = img ? 'url("' + img + '")' : "";
+    el.classList.toggle("has", !!img);
+  });
+  $("pRemove").hidden = !img;
+}
+function squarePhoto(file){
+  return new Promise((res, rej) => {
+    const u = URL.createObjectURL(file), im = new Image();
+    im.onload = () => {
+      const S = 256, k = Math.min(im.width, im.height), cv = document.createElement("canvas");
+      cv.width = cv.height = S;
+      cv.getContext("2d").drawImage(im, (im.width - k) / 2, (im.height - k) / 2, k, k, 0, 0, S, S);
+      URL.revokeObjectURL(u); res(cv.toDataURL("image/jpeg", .85));
+    };
+    im.onerror = () => { URL.revokeObjectURL(u); rej(new Error("bad image")) };
+    im.src = u;
+  });
+}
+
+/* ---- profile menu ---- */
+const menu = $("pMenu"), btn = $("avBtn");
+const setMenu = open => { menu.hidden = !open; btn.setAttribute("aria-expanded", String(open)) };
+btn.onclick = e => { e.stopPropagation(); setMenu(menu.hidden) };
+document.addEventListener("click", e => { if (!menu.hidden && !menu.contains(e.target)) setMenu(false) });
+document.addEventListener("keydown", e => { if (e.key === "Escape") setMenu(false) });
+
+$("pPhoto").onclick = () => $("avFile").click();
+$("avFile").onchange = async () => {
+  const f = $("avFile").files[0]; $("avFile").value = "";
+  if (!f || !user) return;
+  if (!f.type.startsWith("image/")) return alert("Please choose an image file.");
+  try {
+    if (!store.set(avKey, await squarePhoto(f))) alert("Couldn't save the photo (browser storage is full or blocked).");
+    paint();
+  } catch { alert("Couldn't read that image. Try a different one.") }
+};
+$("pRemove").onclick = () => { store.del(avKey); paint() };
+
+/* ---- logout with loading screen ---- */
+$("pLogout").onclick = async () => {
+  if (leaving) return;
+  leaving = true; setMenu(false);
+  $("loText").textContent = "Logging out " + username + "…";
+  $("lo").hidden = false;
+  const wait = new Promise(r => setTimeout(r, 1300));
+  try { await signOut(auth) } catch {}
+  await wait;
+  location.replace("index.html");
+};
+
+/* ---- login guard ---- */
+onAuthStateChanged(auth, u => {
+  if (!u) { if (!leaving) location.replace("index.html"); return; }
+  user = u;
+  username = (u.email || "user").split("@")[0];      // example@gmail.com -> example
+  avKey = "avatar:" + u.uid;
+  window.appUser = username;
+  $("wName").textContent = username;
+  $("pName").textContent = username;
+  $("pMail").textContent = u.email || "";
+  btn.title = username;
+  paint();
+  document.documentElement.classList.remove("authwait");
+});
+</script>
+</body>
+</html>
