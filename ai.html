@@ -181,7 +181,6 @@ header{position:relative}
   <div id="list"></div>
   <div class="sidefoot">
     <button id="memBtn">🧠 Memory</button>
-    <button id="driveBtn" type="button">☁ Google Drive: connect</button>
     <button id="themeBtn">◐ Theme</button>
   </div>
 </aside>
@@ -750,12 +749,6 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const $ = id => document.getElementById(id);
-// ============================================================
-//  GOOGLE DRIVE SETTINGS (paste your values between the quotes)
-//  OAuth Client ID is REQUIRED (Google Cloud Console > APIs & Services > Credentials > OAuth client ID > Web application)
-const GOOGLE_CLIENT_ID = "353310267546-q6a7j33klunrdf419jh5ef086vsddqoq.apps.googleusercontent.com";
-// ============================================================
-
 const store = {
   get(k){ try { return localStorage.getItem(k) } catch { return null } },
   set(k, v){ try { localStorage.setItem(k, v); return true } catch { return false } },
@@ -854,75 +847,6 @@ function cloudSave(){
   }, 1500);
 }
 window.addEventListener("chats-saved", () => { if (synced) cloudSave() });
-
-/* ---- Google Drive storage (hidden app folder in the user's own Drive) ---- */
-const FILE_NAME = "ishanth-ai-data.json";
-let gToken = null, gExp = 0, driveFileId = null, driveOn = false, driveTimer = null;
-const hasPlaceholder = v => !v || v.startsWith("PASTE_");
-
-function loadGis(){
-  return new Promise((res, rej) => {
-    if (window.google && google.accounts && google.accounts.oauth2) return res();
-    const s = document.createElement("script"); s.src = "https://accounts.google.com/gsi/client";
-    s.onload = res; s.onerror = () => rej(new Error("Could not load Google sign-in. Check your internet."));
-    document.head.appendChild(s);
-  });
-}
-async function getToken(){
-  if (gToken && Date.now() < gExp) return gToken;
-  await loadGis();
-  return new Promise((res, rej) => {
-    google.accounts.oauth2.initTokenClient({
-      client_id: GOOGLE_CLIENT_ID,
-      scope: "https://www.googleapis.com/auth/drive.appdata",
-      callback: r => {
-        if (r.error) return rej(new Error(r.error));
-        gToken = r.access_token; gExp = Date.now() + (Number(r.expires_in || 3600) - 60) * 1000; res(gToken);
-      },
-      error_callback: e => rej(new Error((e && e.type) || "Google sign-in was closed or blocked"))
-    }).requestAccessToken();
-  });
-}
-async function drive(path, opts = {}){
-  const t = await getToken();
-  const r = await fetch("https://www.googleapis.com" + path, { ...opts, headers: { Authorization: "Bearer " + t, ...(opts.headers || {}) } });
-  if (!r.ok) throw new Error("Google Drive error " + r.status);
-  return r;
-}
-async function findFile(){
-  const r = await drive("/drive/v3/files?spaces=appDataFolder&fields=files(id)&q=" + encodeURIComponent("name='" + FILE_NAME + "'"));
-  return ((await r.json()).files || [])[0]?.id || null;
-}
-async function driveSave(){
-  const d = window.cloudApi.get();
-  const body = JSON.stringify({ chats: d.chats, memory: d.memory, updated: Date.now() });
-  const meta = driveFileId ? {} : { name: FILE_NAME, parents: ["appDataFolder"] }, B = "ishanthaibound";
-  const multi = "--" + B + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + JSON.stringify(meta) +
-                "\r\n--" + B + "\r\nContent-Type: application/json\r\n\r\n" + body + "\r\n--" + B + "--";
-  const url = (driveFileId ? "/upload/drive/v3/files/" + driveFileId : "/upload/drive/v3/files") + "?uploadType=multipart";
-  const r = await drive(url, { method: driveFileId ? "PATCH" : "POST", headers: { "Content-Type": "multipart/related; boundary=" + B }, body: multi });
-  driveFileId = (await r.json()).id || driveFileId;
-}
-async function driveLoad(){
-  driveFileId = await findFile();
-  if (!driveFileId) return driveSave();                       // first time: upload what is in this browser
-  const d = await (await drive("/drive/v3/files/" + driveFileId + "?alt=media")).json();
-  window.cloudApi.set({ chats: d.chats || [], memory: d.memory || [] });
-}
-const driveBtn = $("driveBtn");
-driveBtn.onclick = async () => {
-  if (driveOn) { driveOn = false; driveBtn.textContent = "☁ Google Drive: connect"; return; }
-  if (hasPlaceholder(GOOGLE_CLIENT_ID)) return alert("Open ai.html and paste your Google OAuth Client ID into GOOGLE_CLIENT_ID first.");
-  driveBtn.disabled = true; driveBtn.textContent = "☁ Connecting…";
-  try { await driveLoad(); driveOn = true; driveBtn.textContent = "☁ Google Drive: saved ✓ (tap to stop)"; }
-  catch (e) { driveBtn.textContent = "☁ Google Drive: connect"; alert("Google Drive failed: " + e.message); }
-  driveBtn.disabled = false;
-};
-window.addEventListener("chats-saved", () => {
-  if (!driveOn) return;
-  clearTimeout(driveTimer);
-  driveTimer = setTimeout(() => driveSave().catch(e => { console.warn("Drive save failed:", e); driveBtn.textContent = "☁ Drive save failed, tap to retry"; driveOn = false }), 2000);
-});
 
 /* ---- login guard ---- */
 onAuthStateChanged(auth, u => {
