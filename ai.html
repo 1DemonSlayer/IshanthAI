@@ -149,8 +149,9 @@ header{position:relative}
 
 /* image viewer */
 #viewer{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px;padding-bottom:max(16px,env(safe-area-inset-bottom))}
-#viewer img{max-width:100%;max-height:calc(100% - 72px);object-fit:contain;border-radius:12px}
-#viewer .bar{display:flex;gap:10px}
+#viewer{overflow:hidden}
+#viewer img{max-width:100%;max-height:calc(100% - 72px);object-fit:contain;border-radius:12px;touch-action:none;user-select:none;-webkit-user-drag:none;transform-origin:center;cursor:zoom-in}
+#viewer .bar{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;position:relative;z-index:2}
 #viewer .bar button{padding:11px 24px;border-radius:22px;font-size:.95rem;background:#fff;color:#111;font-weight:500}
 #viewer .bar button.ghost{background:rgba(255,255,255,.18);color:#fff}
 
@@ -228,6 +229,9 @@ header{position:relative}
 <div id="viewer" hidden role="dialog" aria-label="Image viewer">
   <img id="viewImg" alt="">
   <div class="bar">
+    <button type="button" id="zOut" class="ghost" aria-label="Zoom out">－</button>
+    <button type="button" id="zIn" class="ghost" aria-label="Zoom in">＋</button>
+    <button type="button" id="zReset" class="ghost">Reset</button>
     <button type="button" id="viewDl">⬇ Download</button>
     <button type="button" id="viewClose" class="ghost">Close</button>
   </div>
@@ -398,8 +402,44 @@ const GROQ_API_KEY = "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";
 
   /* image viewer with download */
   const viewer = $("viewer"), viewImg = $("viewImg");
-  function openViewer(src, alt){ viewImg.src = src; viewImg.alt = alt || ""; viewer.hidden = false }
-  function closeViewer(){ viewer.hidden = true; viewImg.removeAttribute("src") }
+  let zs = 1, zx = 0, zy = 0;
+  const applyZ = () => { viewImg.style.transform = "translate(" + zx + "px," + zy + "px) scale(" + zs + ")"; viewImg.style.cursor = zs > 1 ? "grab" : "zoom-in" };
+  // point relative to the image's un-zoomed center
+  const pt = e => { const r = viewImg.getBoundingClientRect(); return { x: e.clientX - (r.left + r.width / 2 - zx), y: e.clientY - (r.top + r.height / 2 - zy) } };
+  function setZoom(ns, cx, cy){
+    ns = Math.min(6, Math.max(1, ns)); const k = ns / zs;
+    zx = cx - (cx - zx) * k; zy = cy - (cy - zy) * k; zs = ns;
+    if (zs === 1) { zx = 0; zy = 0 }
+    applyZ();
+  }
+  const resetZ = () => { zs = 1; zx = 0; zy = 0; applyZ() };
+  function openViewer(src, alt){ resetZ(); viewImg.src = src; viewImg.alt = alt || ""; viewer.hidden = false }
+  function closeViewer(){ viewer.hidden = true; viewImg.removeAttribute("src"); resetZ() }
+
+  $("zIn").onclick = () => setZoom(zs * 1.5, 0, 0);
+  $("zOut").onclick = () => setZoom(zs / 1.5, 0, 0);
+  $("zReset").onclick = resetZ;
+  viewer.addEventListener("wheel", e => { e.preventDefault(); const p = pt(e); setZoom(zs * (e.deltaY < 0 ? 1.15 : 1 / 1.15), p.x, p.y) }, { passive: false });
+  viewImg.addEventListener("dblclick", e => { if (zs > 1) resetZ(); else { const p = pt(e); setZoom(2.5, p.x, p.y) } });
+  document.addEventListener("keydown", e => {
+    if (viewer.hidden) return;
+    if (e.key === "+" || e.key === "=") setZoom(zs * 1.5, 0, 0);
+    else if (e.key === "-") setZoom(zs / 1.5, 0, 0);
+    else if (e.key === "0") resetZ();
+  });
+  const ptrs = new Map(); let lastDist = 0;
+  viewImg.addEventListener("pointerdown", e => { viewImg.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); lastDist = 0 });
+  viewImg.addEventListener("pointermove", e => {
+    if (!ptrs.has(e.pointerId)) return;
+    const prev = ptrs.get(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size === 2) {                                   // two fingers: pinch to zoom
+      const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (lastDist) { const p = pt({ clientX: (a.x + b.x) / 2, clientY: (a.y + b.y) / 2 }); setZoom(zs * d / lastDist, p.x, p.y) }
+      lastDist = d;
+    } else if (ptrs.size === 1 && zs > 1) { zx += e.clientX - prev.x; zy += e.clientY - prev.y; applyZ() }   // one finger/mouse: drag to move
+  });
+  const endP = e => { ptrs.delete(e.pointerId); lastDist = 0 };
+  viewImg.addEventListener("pointerup", endP); viewImg.addEventListener("pointercancel", endP);
   $("viewClose").onclick = closeViewer;
   viewer.addEventListener("click", e => { if (e.target === viewer) closeViewer() });
   document.addEventListener("keydown", e => { if (e.key === "Escape" && !viewer.hidden) closeViewer() });
@@ -714,8 +754,6 @@ const $ = id => document.getElementById(id);
 //  GOOGLE DRIVE SETTINGS (paste your values between the quotes)
 //  OAuth Client ID is REQUIRED (Google Cloud Console > APIs & Services > Credentials > OAuth client ID > Web application)
 const GOOGLE_CLIENT_ID = "353310267546-q6a7j33klunrdf419jh5ef086vsddqoq.apps.googleusercontent.com";
-//  API key is optional (Credentials > API key). Saving works with the Client ID alone.
-const GOOGLE_API_KEY   = "PASTE_YOUR_GOOGLE_API_KEY_HERE";
 // ============================================================
 
 const store = {
@@ -821,7 +859,6 @@ window.addEventListener("chats-saved", () => { if (synced) cloudSave() });
 const FILE_NAME = "ishanth-ai-data.json";
 let gToken = null, gExp = 0, driveFileId = null, driveOn = false, driveTimer = null;
 const hasPlaceholder = v => !v || v.startsWith("PASTE_");
-const keyQ = () => hasPlaceholder(GOOGLE_API_KEY) ? "" : "&key=" + encodeURIComponent(GOOGLE_API_KEY);
 
 function loadGis(){
   return new Promise((res, rej) => {
@@ -853,7 +890,7 @@ async function drive(path, opts = {}){
   return r;
 }
 async function findFile(){
-  const r = await drive("/drive/v3/files?spaces=appDataFolder&fields=files(id)&q=" + encodeURIComponent("name='" + FILE_NAME + "'") + keyQ());
+  const r = await drive("/drive/v3/files?spaces=appDataFolder&fields=files(id)&q=" + encodeURIComponent("name='" + FILE_NAME + "'"));
   return ((await r.json()).files || [])[0]?.id || null;
 }
 async function driveSave(){
@@ -862,14 +899,14 @@ async function driveSave(){
   const meta = driveFileId ? {} : { name: FILE_NAME, parents: ["appDataFolder"] }, B = "ishanthaibound";
   const multi = "--" + B + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + JSON.stringify(meta) +
                 "\r\n--" + B + "\r\nContent-Type: application/json\r\n\r\n" + body + "\r\n--" + B + "--";
-  const url = (driveFileId ? "/upload/drive/v3/files/" + driveFileId : "/upload/drive/v3/files") + "?uploadType=multipart" + keyQ();
+  const url = (driveFileId ? "/upload/drive/v3/files/" + driveFileId : "/upload/drive/v3/files") + "?uploadType=multipart";
   const r = await drive(url, { method: driveFileId ? "PATCH" : "POST", headers: { "Content-Type": "multipart/related; boundary=" + B }, body: multi });
   driveFileId = (await r.json()).id || driveFileId;
 }
 async function driveLoad(){
   driveFileId = await findFile();
   if (!driveFileId) return driveSave();                       // first time: upload what is in this browser
-  const d = await (await drive("/drive/v3/files/" + driveFileId + "?alt=media" + keyQ())).json();
+  const d = await (await drive("/drive/v3/files/" + driveFileId + "?alt=media")).json();
   window.cloudApi.set({ chats: d.chats || [], memory: d.memory || [] });
 }
 const driveBtn = $("driveBtn");
