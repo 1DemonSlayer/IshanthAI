@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Ishanth AI – Sign up</title>
+<title>Ishanth AI – Log in</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22lg%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23ff9a00%22/%3E%3Cstop%20offset%3D%22.55%22%20stop-color%3D%22%23f43f5e%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23a855f7%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2220%22%20fill%3D%22url%28%23lg%29%22/%3E%3Crect%20x%3D%2226%22%20y%3D%2229%22%20width%3D%2212%22%20height%3D%2225%22%20rx%3D%226%22%20fill%3D%22%23fff%22/%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2217%22%20r%3D%228%22%20fill%3D%22%23fff%22/%3E%3Cpath%20fill%3D%22%23fff%22%20d%3D%22M38%2021L46%2027L36%2025Z%22/%3E%3C/svg%3E">
 <style>
 :root{
@@ -72,12 +72,12 @@ label{display:block;font-size:.82rem;color:var(--muted);margin-bottom:14px}
 <body>
 <main class="card">
   <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9a00"/><stop offset=".55" stop-color="#f43f5e"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs><rect width="64" height="64" rx="20" fill="url(#g)"/><rect x="26" y="29" width="12" height="25" rx="6" fill="#fff"/><circle cx="32" cy="17" r="8" fill="#fff"/><path fill="#fff" d="M38 21L46 27L36 25Z"/></svg>
-  <h1 id="title">Create your account</h1>
-  <p class="sub" id="sub">Sign up with your email to start using Ishanth AI</p>
+  <h1 id="title">Welcome back</h1>
+  <p class="sub" id="sub">Log in to continue to Ishanth AI</p>
 
   <div class="tabs" id="tabs">
-    <button type="button" id="tabLogin">Log in</button>
-    <button type="button" id="tabSignup" class="on">Sign up</button>
+    <button type="button" id="tabLogin" class="on">Log in</button>
+    <button type="button" id="tabSignup">Sign up</button>
   </div>
 
   <form id="form" novalidate>
@@ -86,19 +86,19 @@ label{display:block;font-size:.82rem;color:var(--muted);margin-bottom:14px}
     </label>
     <label id="pwWrap">Password
       <div class="pw">
-        <input class="field" id="pw" type="password" autocomplete="new-password" placeholder="At least 6 characters">
+        <input class="field" id="pw" type="password" autocomplete="current-password" placeholder="Your password">
         <button type="button" class="eye" id="eye" aria-label="Show password">Show</button>
       </div>
     </label>
-    <label id="cfWrap">Confirm password
+    <label id="cfWrap" hidden>Confirm password
       <input class="field" id="pw2" type="password" autocomplete="new-password" placeholder="Type the password again">
     </label>
     <div class="row" id="forgotRow">
-      <span class="switch"><span id="switchQ">Already have an account?</span> <button type="button" class="link" id="switchBtn">Log in</button></span>
+      <span class="switch"><span id="switchQ">New here?</span> <button type="button" class="link" id="switchBtn">Sign up</button></span>
       <button type="button" class="link" id="forgot">Forgot password?</button>
     </div>
     <div id="msg" role="alert" aria-live="polite"></div>
-    <button class="primary" id="go" type="submit"><i class="spin" aria-hidden="true"></i><span id="goText">Sign up</span></button>
+    <button class="primary" id="go" type="submit"><i class="spin" aria-hidden="true"></i><span id="goText">Log in</span></button>
   </form>
   <button type="button" class="link back" id="back" hidden>← Back to log in</button>
 </main>
@@ -114,7 +114,7 @@ import {
 
 const $ = id => document.getElementById(id);
 const APP_PAGE = "ai.html";
-let mode = "signup", working = false;
+let mode = "login", working = false;
 
 const TEXT = {
   login:  { title: "Welcome back",        sub: "Log in to continue to Ishanth AI",              btn: "Log in" },
@@ -147,6 +147,7 @@ function setMode(m){
   $("tabLogin").classList.toggle("on", m === "login");
   $("tabSignup").classList.toggle("on", m === "signup");
   $("pw").autocomplete = m === "signup" ? "new-password" : "current-password";
+  $("pw").placeholder = m === "signup" ? "At least 6 characters" : "Your password";
   document.title = "Ishanth AI – " + (m === "signup" ? "Sign up" : m === "forgot" ? "Reset password" : "Log in");
   clearMsg();
 }
@@ -219,7 +220,7 @@ $("form").addEventListener("submit", async e => {
   }
 });
 
-setMode("signup");   // the page opens on Sign up
+setMode("login");   // the page opens on Log in
 
 /* ---------- already logged in? go straight to the app ---------- */
 onAuthStateChanged(auth, user => {
