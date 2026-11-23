@@ -865,5 +865,176 @@ onAuthStateChanged(auth, u => {
   document.documentElement.classList.remove("authwait");
 });
 </script>
+
+<!-- ===== CAMERA ADD-ON: paste this whole block in ai.html, just before </body> ===== -->
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+
+  /* ---------- styles ---------- */
+  const st = document.createElement("style");
+  st.textContent = `
+  #cam{position:fixed;inset:0;z-index:70;background:#000}
+  #camView{position:absolute;inset:env(safe-area-inset-top,0px) 0 0 0;border-radius:28px 28px 0 0;overflow:hidden;background:#111;touch-action:none}
+  #camVideo,#camShot{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .camHandle{position:absolute;top:8px;left:50%;width:44px;height:4px;margin-left:-22px;background:rgba(255,255,255,.55);border-radius:2px;z-index:3}
+  #camZoom{position:absolute;top:24px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;padding:4px 12px;border-radius:14px;font-size:.85rem;z-index:3;opacity:0;transition:opacity .2s;pointer-events:none}
+  #camFlashScr{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:4;transition:opacity .1s}
+  #camMsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;background:#111;color:#fff;z-index:5}
+  .camCtl{position:absolute;left:0;right:0;bottom:max(28px,env(safe-area-inset-bottom));display:flex;justify-content:space-between;align-items:center;padding:0 24px;z-index:6}
+  .camBtn{width:46px;height:46px;border-radius:50%;background:rgba(40,40,40,.75);color:#fff;display:grid;place-items:center;font-size:24px;backdrop-filter:blur(6px)}
+  .camBtn.on{background:#fff;color:#000}
+  .camBtn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  #camShutter{width:74px;height:74px;border-radius:50%;background:#fff;border:5px solid rgba(255,255,255,.45);background-clip:padding-box}
+  #camShutter:active{transform:scale(.93)}
+  .camSide{width:46px;position:relative}
+  #camMore{position:absolute;right:0;bottom:58px;display:flex;flex-direction:column;gap:12px}
+  #camReview button{background:rgba(40,40,40,.85);color:#fff;border-radius:24px;padding:14px 26px;font-size:1rem}
+  #camReview #camUse{background:#fff;color:#000;font-weight:600}`;
+  document.head.appendChild(st);
+
+  /* ---------- camera screen ---------- */
+  const camEl = document.createElement("div");
+  camEl.id = "cam"; camEl.hidden = true;
+  camEl.setAttribute("role", "dialog"); camEl.setAttribute("aria-label", "Camera");
+  camEl.innerHTML = `
+  <div id="camView">
+    <div class="camHandle"></div>
+    <video id="camVideo" autoplay playsinline muted></video>
+    <img id="camShot" alt="Captured photo" hidden>
+    <div id="camZoom">1.0×</div>
+    <div id="camFlashScr"></div>
+    <div id="camMsg" hidden></div>
+    <div class="camCtl" id="camLive">
+      <button type="button" class="camBtn" id="camBack" aria-label="Back">‹</button>
+      <button type="button" id="camShutter" aria-label="Take photo"></button>
+      <div class="camSide">
+        <div id="camMore" hidden>
+          <button type="button" class="camBtn" id="camFlash" aria-label="Flash" hidden>
+            <svg viewBox="0 0 24 24"><path d="M13 3L5 13h6l-1 8 8-10h-6z"/><path class="camSlash" d="M4 4l16 16"/></svg>
+          </button>
+          <button type="button" class="camBtn" id="camFlip" aria-label="Switch camera">
+            <svg viewBox="0 0 24 24"><path d="M4 11a8 8 0 0113.7-4.5L20 9M20 4v5h-5"/><path d="M20 13a8 8 0 01-13.7 4.5L4 15M4 20v-5h5"/></svg>
+          </button>
+        </div>
+        <button type="button" class="camBtn" id="camDots" aria-label="More">⋮</button>
+      </div>
+    </div>
+    <div class="camCtl" id="camReview" hidden>
+      <button type="button" id="camRetake">Retake</button>
+      <button type="button" id="camUse">Use photo</button>
+    </div>
+  </div>`;
+  document.body.appendChild(camEl);
+  const canvas = document.createElement("canvas"); canvas.hidden = true; document.body.appendChild(canvas);
+
+  /* ---------- + menu: Photos, Camera, Files, Create image ---------- */
+  const menu = $("addMenu"), mUpload = $("mUpload"), mImage = $("mImage");
+  const photoIn = document.createElement("input");
+  photoIn.type = "file"; photoIn.accept = "image/*"; photoIn.multiple = true; photoIn.hidden = true;
+  document.body.appendChild(photoIn);
+
+  const mk = (id, label) => { const b = document.createElement("button"); b.type = "button"; b.id = id; b.textContent = label; return b };
+  const mPhotos = mk("mPhotos", "🖼 Photos"), mCamera = mk("mCamera", "📷 Camera");
+  mUpload.textContent = "📎 Files";
+  mImage.firstChild.nodeValue = "✨ Create image ";
+  menu.insertBefore(mPhotos, mUpload);
+  menu.insertBefore(mCamera, mUpload);
+
+  // hand picked files to your existing uploader (it reads from the #file input)
+  function sendToApp(files){
+    const dt = new DataTransfer();
+    [...files].forEach(f => dt.items.add(f));
+    const fi = $("file"); fi.files = dt.files; fi.dispatchEvent(new Event("change"));
+  }
+  mPhotos.onclick = () => { menu.hidden = true; photoIn.click() };
+  photoIn.onchange = () => { if (photoIn.files.length) sendToApp(photoIn.files); photoIn.value = "" };
+  mCamera.onclick = () => { menu.hidden = true; openCam() };
+
+  /* ---------- camera logic ---------- */
+  const video = $("camVideo");
+  let stream = null, track = null, facing = "environment", flashOn = false, hasTorch = false;
+  let blob = null, zMin = 1, zMax = 1, zoom = 1, hasZoom = false;
+
+  const msg = t => { const m = $("camMsg"); m.textContent = t; m.hidden = !t };
+  const stop = () => { if (stream) stream.getTracks().forEach(t => t.stop()); stream = track = null };
+  function flashIcon(){ $("camFlash").classList.toggle("on", flashOn); $("camFlash").querySelector(".camSlash").style.display = flashOn ? "none" : "" }
+  function mode(review){
+    video.hidden = review; $("camShot").hidden = !review;
+    $("camLive").hidden = review; $("camReview").hidden = !review; $("camMore").hidden = true;
+  }
+  async function start(){
+    stop(); msg("");
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+    } catch (err) {
+      msg(err.name === "NotAllowedError" ? "Camera access is blocked. Allow it in your browser settings, then try again." : "Could not open the camera.");
+      return;
+    }
+    track = stream.getVideoTracks()[0];
+    video.srcObject = stream;
+    video.style.transform = facing === "user" ? "scaleX(-1)" : "none";
+    const caps = track.getCapabilities ? track.getCapabilities() : {};
+    hasTorch = "torch" in caps;
+    $("camFlash").hidden = !(hasTorch || facing === "user");   // front camera uses a white-screen flash
+    flashOn = false; flashIcon();
+    hasZoom = "zoom" in caps;
+    if (hasZoom) { zMin = caps.zoom.min; zMax = caps.zoom.max; zoom = track.getSettings().zoom || zMin }
+  }
+  function openCam(){
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { alert("Camera needs HTTPS (or localhost) and a modern browser."); return }
+    camEl.hidden = false; mode(false); start();
+  }
+  function closeCam(){ stop(); camEl.hidden = true }
+
+  $("camBack").onclick = closeCam;
+  $("camDots").onclick = () => { $("camMore").hidden = !$("camMore").hidden };
+  $("camFlip").onclick = () => { facing = facing === "environment" ? "user" : "environment"; start() };
+  $("camFlash").onclick = async () => {
+    flashOn = !flashOn;
+    if (hasTorch) { try { await track.applyConstraints({ advanced: [{ torch: flashOn }] }) } catch { flashOn = false } }
+    flashIcon();
+  };
+
+  /* pinch / wheel zoom */
+  let p0 = 0, z0 = 1, pillT;
+  const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  async function setZoom(v){
+    zoom = Math.min(zMax, Math.max(zMin, v));
+    const p = $("camZoom"); p.textContent = zoom.toFixed(1) + "×"; p.style.opacity = 1;
+    clearTimeout(pillT); pillT = setTimeout(() => p.style.opacity = 0, 900);
+    try { await track.applyConstraints({ advanced: [{ zoom }] }) } catch {}
+  }
+  const view = $("camView");
+  view.addEventListener("touchstart", e => { if (e.touches.length === 2) { p0 = dist(e.touches); z0 = zoom } });
+  view.addEventListener("touchmove", e => { if (e.touches.length === 2 && hasZoom) setZoom(z0 * dist(e.touches) / p0) }, { passive: true });
+  view.addEventListener("wheel", e => { if (hasZoom) setZoom(zoom + (e.deltaY < 0 ? .2 : -.2)) }, { passive: true });
+
+  /* take photo */
+  $("camShutter").onclick = async () => {
+    if (flashOn && !hasTorch) { $("camFlashScr").style.opacity = 1; await new Promise(r => setTimeout(r, 250)) }
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (facing === "user") { ctx.translate(canvas.width, 0); ctx.scale(-1, 1) }
+    ctx.drawImage(video, 0, 0);
+    $("camFlashScr").style.opacity = 0;
+    canvas.toBlob(b => { blob = b; $("camShot").src = URL.createObjectURL(b); mode(true) }, "image/jpeg", .92);
+  };
+  $("camRetake").onclick = () => mode(false);
+  $("camUse").onclick = () => {
+    const f = new File([blob], "camera-" + Date.now() + ".jpg", { type: "image/jpeg" });
+    closeCam(); sendToApp([f]);
+  };
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !camEl.hidden) closeCam() });
+  document.addEventListener("visibilitychange", () => { if (document.hidden && !camEl.hidden) closeCam() });
+})();
+</script>
+<!-- ===== END CAMERA ADD-ON ===== -->
+
+
+
+
+
+  
 </body>
 </html>
