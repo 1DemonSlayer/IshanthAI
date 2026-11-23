@@ -66,6 +66,15 @@ select{background:var(--input);border:0;border-radius:18px;padding:8px 12px;font
 .body pre{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0;overflow-x:auto;white-space:pre;font-size:.86rem;line-height:1.5}
 .body code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em}
 .body :not(pre)>code{background:var(--code);border-radius:5px;padding:2px 6px}
+
+/* code blocks with copy button */
+.codebox{margin:10px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--code);white-space:normal}
+.codehead{display:flex;justify-content:space-between;align-items:center;padding:5px 8px 5px 14px;background:var(--hover);font-size:.78rem;color:var(--muted);line-height:1.4}
+.copy{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;font-size:.78rem;color:var(--ink)}
+.copy:hover{background:var(--line)}
+.copy svg{width:14px;height:14px}
+.body .codebox pre{margin:0;border:0;border-radius:0;background:none}
+
 .think{display:flex;gap:5px;padding:10px 0}
 .think i{width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,#ff9a00,#f43f5e);animation:p 1.1s infinite}
 .think i:nth-child(2){animation-delay:.15s}.think i:nth-child(3){animation-delay:.3s}
@@ -92,7 +101,7 @@ textarea::placeholder{color:var(--muted)}
 .atts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .thumb{width:110px;height:110px;object-fit:cover;border-radius:12px}
 .chip2{background:var(--bg);border-radius:12px;padding:6px 10px;font-size:.85rem}
-.gen{display:block;width:min(512px,100%);border-radius:16px;background:var(--code)}
+.gen{display:block;width:min(640px,100%);height:auto;border-radius:16px;background:var(--code);cursor:zoom-in}
 #send{width:42px;height:42px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;flex-shrink:0}
 #send:disabled{opacity:.3;cursor:not-allowed}
 .note{text-align:center;font-size:.72rem;color:var(--muted);margin-top:8px}
@@ -137,6 +146,14 @@ header{position:relative}
 #lo p{color:var(--muted);font-size:1rem;overflow-wrap:anywhere}
 .lspin{width:46px;height:46px;border:4px solid var(--accent);border-right-color:transparent;border-radius:50%;animation:lr .7s linear infinite!important}
 @keyframes lr{to{transform:rotate(360deg)}}
+
+/* image viewer */
+#viewer{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px;padding-bottom:max(16px,env(safe-area-inset-bottom))}
+#viewer img{max-width:100%;max-height:calc(100% - 72px);object-fit:contain;border-radius:12px}
+#viewer .bar{display:flex;gap:10px}
+#viewer .bar button{padding:11px 24px;border-radius:22px;font-size:.95rem;background:#fff;color:#111;font-weight:500}
+#viewer .bar button.ghost{background:rgba(255,255,255,.18);color:#fff}
+
 @media (max-width:480px){
   header .title{display:none}
   header .logo{margin-right:auto}
@@ -163,6 +180,7 @@ header{position:relative}
   <div id="list"></div>
   <div class="sidefoot">
     <button id="memBtn">🧠 Memory</button>
+    <button id="driveBtn" type="button">☁ Google Drive: connect</button>
     <button id="themeBtn">◐ Theme</button>
   </div>
 </aside>
@@ -207,6 +225,14 @@ header{position:relative}
 
 <div id="lo" hidden role="status" aria-live="polite"><i class="lspin"></i><p id="loText">Logging out…</p></div>
 
+<div id="viewer" hidden role="dialog" aria-label="Image viewer">
+  <img id="viewImg" alt="">
+  <div class="bar">
+    <button type="button" id="viewDl">⬇ Download</button>
+    <button type="button" id="viewClose" class="ghost">Close</button>
+  </div>
+</div>
+
 <dialog id="memDlg">
   <h2>Memory</h2>
   <p>Things Ishanth AI remembers about you. Tell it "remember ..." to add more, or "forget ..." to remove something.</p>
@@ -240,15 +266,25 @@ const GROQ_API_KEY = "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";
   const wrap = $("wrap"), chat = $("chat"), input = $("input"), send = $("send"), model = $("model");
   const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const strip = (k, v) => k === "data" ? undefined : v;
-  const saveChats = () => { LS.set("chats", JSON.stringify(chats, strip)); };
+  const saveChats = () => { LS.set("chats", JSON.stringify(chats, strip)); window.dispatchEvent(new Event("chats-saved")); };
   const sparkle = '<svg class="avatar"><use href="#spark"/></svg>';
+
+  /* hooks used by the cloud sync code at the bottom of the page */
+  window.cloudApi = {
+    get: () => ({ chats: JSON.parse(JSON.stringify(chats, strip)), memory: mem }),
+    set: d => {
+      if (Array.isArray(d.chats)) { chats = d.chats; LS.set("chats", JSON.stringify(chats, strip)); }
+      if (Array.isArray(d.memory)) { mem = d.memory; LS.set("memory", JSON.stringify(mem)); }
+      if (!busy) show();
+    }
+  };
 
   /* ---------- memory ---------- */
   // The exact answer given when someone asks who built the AI. Edit this line to change it.
   const CREATOR = "I was created by you—RA Ishanth, the developer who built me. How can I assist you further?";
   let mem = []; try { mem = JSON.parse(LS.get("memory") || "[]") } catch {}
   if (!Array.isArray(mem)) mem = [];
-  const saveMem = () => LS.set("memory", JSON.stringify(mem));
+  const saveMem = () => { LS.set("memory", JSON.stringify(mem)); window.dispatchEvent(new Event("chats-saved")); };
 
   function remember(f){
     f = f.replace(/\s+/g, " ").trim().replace(/[.!\s]+$/, "").slice(0, 200);
@@ -287,7 +323,7 @@ const GROQ_API_KEY = "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";
     return null;
   }
   function systemPrompt(){
-    let s = "You are Ishanth AI, a helpful, friendly assistant. Keep answers clear and concise. When the user attaches a document (PDF, Word or text), read it carefully, briefly summarize it, point out any problems, questions or tasks in it, and give clear step-by-step solutions or answers. You were created by RA Ishanth. If anyone asks who built, made or created you, answer exactly: \"" + CREATOR + "\"";
+    let s = "You are Ishanth AI, a helpful, friendly assistant. Keep answers clear and concise. When the user asks for code, always put each file or language in its own fenced code block with the language name (for example ```html, ```css, ```js, ```python, ```php, ```cpp, ```c). You can write code in any programming language. When the user attaches a document (PDF, Word or text), read it carefully, briefly summarize it, point out any problems, questions or tasks in it, and give clear step-by-step solutions or answers. You were created by RA Ishanth. If anyone asks who built, made or created you, answer exactly: \"" + CREATOR + "\"";
     if (window.appUser) s += " The user's username is " + window.appUser + ".";
     if (mem.length) s += "\n\nThings the user has told you (use them naturally when relevant, and don't list them unless asked):\n" + mem.map(x => "- " + x).join("\n");
     return s;
@@ -322,10 +358,15 @@ const GROQ_API_KEY = "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";
   $("menu").onclick = () => side.classList.toggle("closed");
   $("menu2").onclick = () => side.classList.add("closed");
 
-  /* simple markdown */
+  /* simple markdown (code blocks get a language label and a copy button) */
+  const COPY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
   function md(text){
     return text.split("```").map((p,i) => {
-      if (i % 2) return "<pre><code>" + esc(p.replace(/^[^\n]*\n/, "").replace(/\n$/, "")) + "</code></pre>";
+      if (i % 2) {
+        const lang = (p.match(/^[ \t]*([\w#+.-]+)[ \t]*\n/) || [])[1] || "code";
+        const code = p.replace(/^[^\n]*\n/, "").replace(/\n$/, "");
+        return '<div class="codebox"><div class="codehead"><span>' + esc(lang) + '</span><button type="button" class="copy" aria-label="Copy code">' + COPY_ICON + '<span>Copy</span></button></div><pre><code>' + esc(code) + "</code></pre></div>";
+      }
       return esc(p)
         .replace(/^#{1,6}\s*(.+)$/gm, "<strong>$1</strong>")
         .replace(/^\s*[*-]\s+/gm, "• ")
@@ -333,6 +374,46 @@ const GROQ_API_KEY = "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";
         .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
     }).join("");
   }
+
+  /* copy buttons (one handler for every code block) */
+  async function copyText(s){
+    try { await navigator.clipboard.writeText(s); return true } catch {}
+    try {
+      const ta = document.createElement("textarea"); ta.value = s; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select(); const ok = document.execCommand("copy"); ta.remove(); return ok;
+    } catch { return false }
+  }
+  wrap.addEventListener("click", async e => {
+    const b = e.target.closest(".copy");
+    if (b) {
+      const code = b.closest(".codebox").querySelector("pre").textContent;
+      const label = b.querySelector("span"), ok = await copyText(code);
+      label.textContent = ok ? "Copied ✓" : "Copy failed";
+      clearTimeout(b._t); b._t = setTimeout(() => { if (b.isConnected) label.textContent = "Copy" }, 1600);
+      return;
+    }
+    const g = e.target.closest("img.gen");
+    if (g) openViewer(g.currentSrc || g.src, g.alt);
+  });
+
+  /* image viewer with download */
+  const viewer = $("viewer"), viewImg = $("viewImg");
+  function openViewer(src, alt){ viewImg.src = src; viewImg.alt = alt || ""; viewer.hidden = false }
+  function closeViewer(){ viewer.hidden = true; viewImg.removeAttribute("src") }
+  $("viewClose").onclick = closeViewer;
+  viewer.addEventListener("click", e => { if (e.target === viewer) closeViewer() });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !viewer.hidden) closeViewer() });
+  $("viewDl").onclick = async () => {
+    const src = viewImg.src, btn = $("viewDl"), old = btn.textContent;
+    btn.textContent = "Downloading…";
+    try {
+      const r = await fetch(src); if (!r.ok) throw 0;
+      const blob = await r.blob(), ext = (blob.type.split("/")[1] || "jpg").replace("jpeg", "jpg").split("+")[0];
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "ishanth-ai-image." + ext;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    } catch { window.open(src, "_blank") }   // fallback: open the image so it can be saved manually
+    btn.textContent = old;
+  };
 
   /* rendering */
   function addRow(kind, html){
@@ -559,7 +640,8 @@ const GROQ_API_KEY = "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";
       input.value = ""; resize();
       busy = true; send.disabled = true;
       const b = addRow("bot", '<div class="think"><i></i><i></i><i></i></div>');
-      const url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt) + "?width=1024&height=1024&nologo=true&seed=" + Math.floor(Math.random() * 1e6);
+      // 1024x1024, flux model + enhance for a sharper, more detailed result
+      const url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt) + "?width=1024&height=1024&model=flux&enhance=true&nologo=true&seed=" + Math.floor(Math.random() * 1e6);
       const done = () => { busy = false; send.disabled = false; renderList(); input.focus(); chat.scrollTop = chat.scrollHeight };
       const img = new Image(); img.className = "gen"; img.alt = prompt;
       img.onload = () => { b.innerHTML = ""; b.appendChild(img); c.msgs.push({ role: "assistant", text: prompt, img: url }); saveChats(); done() };
@@ -625,8 +707,17 @@ const GROQ_API_KEY = "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";
 // Login guard + profile (username, photo, logout) + welcome bar with date and time
 import { auth } from "./firebase-config.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const $ = id => document.getElementById(id);
+// ============================================================
+//  GOOGLE DRIVE SETTINGS (paste your values between the quotes)
+//  OAuth Client ID is REQUIRED (Google Cloud Console > APIs & Services > Credentials > OAuth client ID > Web application)
+const GOOGLE_CLIENT_ID = "353310267546-q6a7j33klunrdf419jh5ef086vsddqoq.apps.googleusercontent.com";
+//  API key is optional (Credentials > API key). Saving works with the Client ID alone.
+const GOOGLE_API_KEY   = "PASTE_YOUR_GOOGLE_API_KEY_HERE";
+// ============================================================
+
 const store = {
   get(k){ try { return localStorage.getItem(k) } catch { return null } },
   set(k, v){ try { localStorage.setItem(k, v); return true } catch { return false } },
@@ -693,9 +784,108 @@ $("pLogout").onclick = async () => {
   $("lo").hidden = false;
   const wait = new Promise(r => setTimeout(r, 1300));
   try { await signOut(auth) } catch {}
+  store.del("chats"); store.del("memory");   // your data stays safe in the cloud; this just clears the browser copy
   await wait;
   location.replace("index.html");
 };
+
+/* ---- cloud storage (Firebase Firestore): chats + memory saved per user ---- */
+const db = getFirestore(auth.app);
+let ref = null, timer = null, synced = false;
+
+async function cloudLoad(){
+  try {
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const d = snap.data();
+      window.cloudApi.set({ chats: JSON.parse(d.chats || "[]"), memory: JSON.parse(d.memory || "[]") });
+    } else cloudSave();                      // first login: upload what is in this browser
+    synced = true;
+  } catch (e) { console.warn("Cloud load failed:", e) }
+}
+function cloudSave(){
+  if (!ref) return;
+  clearTimeout(timer);
+  timer = setTimeout(async () => {
+    try {
+      const d = window.cloudApi.get();
+      let chats = d.chats, s = JSON.stringify(chats);
+      while (s.length > 900000 && chats.length > 1) { chats = chats.slice(0, -1); s = JSON.stringify(chats) }  // Firestore limit is 1 MB per document
+      await setDoc(ref, { chats: s, memory: JSON.stringify(d.memory), updated: Date.now() });
+    } catch (e) { console.warn("Cloud save failed:", e) }
+  }, 1500);
+}
+window.addEventListener("chats-saved", () => { if (synced) cloudSave() });
+
+/* ---- Google Drive storage (hidden app folder in the user's own Drive) ---- */
+const FILE_NAME = "ishanth-ai-data.json";
+let gToken = null, gExp = 0, driveFileId = null, driveOn = false, driveTimer = null;
+const hasPlaceholder = v => !v || v.startsWith("PASTE_");
+const keyQ = () => hasPlaceholder(GOOGLE_API_KEY) ? "" : "&key=" + encodeURIComponent(GOOGLE_API_KEY);
+
+function loadGis(){
+  return new Promise((res, rej) => {
+    if (window.google && google.accounts && google.accounts.oauth2) return res();
+    const s = document.createElement("script"); s.src = "https://accounts.google.com/gsi/client";
+    s.onload = res; s.onerror = () => rej(new Error("Could not load Google sign-in. Check your internet."));
+    document.head.appendChild(s);
+  });
+}
+async function getToken(){
+  if (gToken && Date.now() < gExp) return gToken;
+  await loadGis();
+  return new Promise((res, rej) => {
+    google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: "https://www.googleapis.com/auth/drive.appdata",
+      callback: r => {
+        if (r.error) return rej(new Error(r.error));
+        gToken = r.access_token; gExp = Date.now() + (Number(r.expires_in || 3600) - 60) * 1000; res(gToken);
+      },
+      error_callback: e => rej(new Error((e && e.type) || "Google sign-in was closed or blocked"))
+    }).requestAccessToken();
+  });
+}
+async function drive(path, opts = {}){
+  const t = await getToken();
+  const r = await fetch("https://www.googleapis.com" + path, { ...opts, headers: { Authorization: "Bearer " + t, ...(opts.headers || {}) } });
+  if (!r.ok) throw new Error("Google Drive error " + r.status);
+  return r;
+}
+async function findFile(){
+  const r = await drive("/drive/v3/files?spaces=appDataFolder&fields=files(id)&q=" + encodeURIComponent("name='" + FILE_NAME + "'") + keyQ());
+  return ((await r.json()).files || [])[0]?.id || null;
+}
+async function driveSave(){
+  const d = window.cloudApi.get();
+  const body = JSON.stringify({ chats: d.chats, memory: d.memory, updated: Date.now() });
+  const meta = driveFileId ? {} : { name: FILE_NAME, parents: ["appDataFolder"] }, B = "ishanthaibound";
+  const multi = "--" + B + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + JSON.stringify(meta) +
+                "\r\n--" + B + "\r\nContent-Type: application/json\r\n\r\n" + body + "\r\n--" + B + "--";
+  const url = (driveFileId ? "/upload/drive/v3/files/" + driveFileId : "/upload/drive/v3/files") + "?uploadType=multipart" + keyQ();
+  const r = await drive(url, { method: driveFileId ? "PATCH" : "POST", headers: { "Content-Type": "multipart/related; boundary=" + B }, body: multi });
+  driveFileId = (await r.json()).id || driveFileId;
+}
+async function driveLoad(){
+  driveFileId = await findFile();
+  if (!driveFileId) return driveSave();                       // first time: upload what is in this browser
+  const d = await (await drive("/drive/v3/files/" + driveFileId + "?alt=media" + keyQ())).json();
+  window.cloudApi.set({ chats: d.chats || [], memory: d.memory || [] });
+}
+const driveBtn = $("driveBtn");
+driveBtn.onclick = async () => {
+  if (driveOn) { driveOn = false; driveBtn.textContent = "☁ Google Drive: connect"; return; }
+  if (hasPlaceholder(GOOGLE_CLIENT_ID)) return alert("Open ai.html and paste your Google OAuth Client ID into GOOGLE_CLIENT_ID first.");
+  driveBtn.disabled = true; driveBtn.textContent = "☁ Connecting…";
+  try { await driveLoad(); driveOn = true; driveBtn.textContent = "☁ Google Drive: saved ✓ (tap to stop)"; }
+  catch (e) { driveBtn.textContent = "☁ Google Drive: connect"; alert("Google Drive failed: " + e.message); }
+  driveBtn.disabled = false;
+};
+window.addEventListener("chats-saved", () => {
+  if (!driveOn) return;
+  clearTimeout(driveTimer);
+  driveTimer = setTimeout(() => driveSave().catch(e => { console.warn("Drive save failed:", e); driveBtn.textContent = "☁ Drive save failed, tap to retry"; driveOn = false }), 2000);
+});
 
 /* ---- login guard ---- */
 onAuthStateChanged(auth, u => {
@@ -704,6 +894,8 @@ onAuthStateChanged(auth, u => {
   username = (u.email || "user").split("@")[0];      // example@gmail.com -> example
   avKey = "avatar:" + u.uid;
   window.appUser = username;
+  ref = doc(db, "users", u.uid);
+  cloudLoad();
   $("wName").textContent = username;
   $("pName").textContent = username;
   $("pMail").textContent = u.email || "";
