@@ -63,6 +63,15 @@ label{display:block;font-size:.82rem;color:var(--muted);margin-bottom:14px}
 @keyframes r{to{transform:rotate(360deg)}}
 .back{display:block;margin:16px auto 0}
 
+/* Android app download */
+.apk{display:flex;align-items:center;gap:12px;margin-top:22px;padding:12px 14px;
+  border:1px solid var(--line);border-radius:18px;text-decoration:none;color:var(--ink);background:var(--field)}
+.apk:hover{background:var(--hover)}
+.apk .txt{flex:1;font-size:.86rem;line-height:1.4;color:var(--muted)}
+.apk .txt b{display:block;color:var(--ink);font-weight:500;font-size:.92rem}
+.apk .dl{width:40px;height:40px;border-radius:50%;background:var(--accent);color:var(--bg);display:grid;place-items:center;flex:none}
+.apk .dl svg{width:20px;height:20px}
+
 #overlay{position:fixed;inset:0;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(6px);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:10}
 #overlay .spin{display:block;width:46px;height:46px;border-width:4px;color:var(--accent)}
@@ -101,6 +110,13 @@ label{display:block;font-size:.82rem;color:var(--muted);margin-bottom:14px}
     <button class="primary" id="go" type="submit"><i class="spin" aria-hidden="true"></i><span id="goText">Log in</span></button>
   </form>
   <button type="button" class="link back" id="back" hidden>← Back to log in</button>
+
+  <a class="apk" href="Ishanth_AI.apk" download="Ishanth_AI.apk">
+    <span class="txt"><b>Get the Android app</b>Want the Ishanth AI app for Android? Download it here.</span>
+    <span class="dl" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>
+    </span>
+  </a>
 </main>
 
 <div id="overlay" hidden role="status" aria-live="polite"><i class="spin"></i><p id="ovText">Please wait…</p></div>
